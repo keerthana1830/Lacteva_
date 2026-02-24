@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: lacteva-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: lacteva
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - lacteva-network
+
+  # ML Service
+  ml-service:
+    build:
+      context: ../ml-service
+      dockerfile: Dockerfile
+    container_name: lacteva-ml-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ml_models:/app/models
+    networks:
+      - lacteva-network
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Next.js Dashboard (for local development)
+  dashboard:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    container_name: lacteva-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/lacteva?authSource=admin
+      - ML_SERVICE_URL=http://ml-service:8000
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - NEXTAUTH_SECRET=your-nextauth-secret-change-in-production
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - lacteva-network
+    depends_on:
+      - mongodb
+      - ml-service
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: lacteva-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lacteva-network
+
+volumes:
+  mongodb_data:
+  ml_models:
+  redis_data:
+
+networks:
+  lacteva-network:
+    driver: bridge
