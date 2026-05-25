@@ -366,8 +366,4 @@ For issues and questions:
 
 ---
 
-**LACTEVA Dashboard** - Intelligent milk quality monitoring for the modern dairy industry.#   t e s t - - m l 
- 
- #   L a c t e v a - 
- 
- 
+**LACTEVA Dashboard** - Intelligent milk quality monitoring for the modern dairy industry.#
